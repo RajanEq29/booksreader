@@ -1,75 +1,80 @@
-import { useState, useEffect, type ChangeEvent } from "react";
+// import { useState, useEffect, type ChangeEvent } from "react";
+import logo from '../assets/image/Group 1171282670.png'
 
-interface StoredData {
-  image: string | null;
-  pdfFile: string | null;
-}
+// interface StoredData {
+//   image: string | null;
+//   pdfFile: string | null;
+// }
 
-interface HeaderProps {
-  setStoredData: (data: StoredData) => void;
-}
+// interface HeaderProps {
+//   setStoredData: (data: StoredData) => void;
+// }
 
-export default function Header({ setStoredData }: HeaderProps) {
-  const [image, setImage] = useState<string | null>(null);
-  const [pdfFile, setPdfFile] = useState<string | null>(null);
+export default function Header() {
+  // const [image, setImage] = useState<string | null>(null);
+  // const [pdfFile, setPdfFile] = useState<string | null>(null);
 
-  useEffect(() => {
-    const savedDataStr = localStorage.getItem("homeData");
-    if (savedDataStr) {
-      try {
-        const savedData: StoredData = JSON.parse(savedDataStr);
-        setImage(savedData.image);
-        setPdfFile(savedData.pdfFile);
-        setStoredData(savedData);
-      } catch (e) {
-        console.error("Failed to parse stored data", e);
-      }
-    }
-  }, [setStoredData]);
+  // useEffect(() => {
+  //   const savedDataStr = localStorage.getItem("homeData");
+  //   if (savedDataStr) {
+  //     try {
+  //       const savedData: StoredData = JSON.parse(savedDataStr);
+  //       setImage(savedData.image);
+  //       // Only set PDF if it's not a blob URL, or handle it as session-only
+  //       if (savedData.pdfFile && !savedData.pdfFile.startsWith('blob:')) {
+  //         setPdfFile(savedData.pdfFile);
+  //       } else {
+  //         savedData.pdfFile = null;
+  //       }
+  //       setStoredData(savedData);
+  //     } catch (e) {
+  //       console.error("Failed to parse stored data", e);
+  //     }
+  //   }
+  // }, [setStoredData]);
 
-  const saveData = (newImage: string | null, newPdf: string | null) => {
-    const data: StoredData = {
-      image: newImage ?? image,
-      pdfFile: newPdf ?? pdfFile,
-    };
-    // Note: Storing blob URLs in localStorage is temporary and will not persist across sessions reliably.
-    // For a real app, consider using IndexedDB or re-uploading on session start.
-    localStorage.setItem("homeData", JSON.stringify(data));
-    setStoredData(data);
-  };
+  // const saveData = (newImage: string | null, newPdf: string | null) => {
+  //   const data: StoredData = {
+  //     image: newImage ?? image,
+  //     pdfFile: newPdf ?? pdfFile,
+  //   };
+  //   // Note: Storing blob URLs in localStorage is temporary and will not persist across sessions reliably.
+  //   // For a real app, consider using IndexedDB or re-uploading on session start.
+  //   localStorage.setItem("homeData", JSON.stringify(data));
+  //   setStoredData(data);
+  // };
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const imgUrl = URL.createObjectURL(file);
-      setImage(imgUrl);
-      saveData(imgUrl, null);
-    }
-  };
+  // const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (file) {
+  //     const imgUrl = URL.createObjectURL(file);
+  //     setImage(imgUrl);
+  //     saveData(imgUrl, null);
+  //   }
+  // };
 
-  const handlePdfChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type === "application/pdf") {
-      const pdfUrl = URL.createObjectURL(file);
-      setPdfFile(pdfUrl);
-      saveData(null, pdfUrl);
-    } else {
-      alert("Please upload a valid PDF");
-    }
-  };
+  // const handlePdfChange = (e: ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (file && file.type === "application/pdf") {
+  //     const pdfUrl = URL.createObjectURL(file);
+  //     setPdfFile(pdfUrl);
+  //     saveData(null, pdfUrl);
+  //   } else {
+  //     alert("Please upload a valid PDF");
+  //   }
+  // };
 
   return (
-    <header className="w-full bg-gray-900/80 backdrop-blur-sm border-b border-gray-800 z-50 sticky top-0">
+    <header className="w-full bg-[#FED6A8] ">
       <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
-
-        <h1 className="text-2xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400 tracking-wide">
-          Book<span className="text-gray-100">Reader</span>
-        </h1>
+        <div className="">
+          <img src={logo} alt="" />
+        </div>
 
         <div className="flex items-center gap-6">
 
           {/* PDF Upload Button */}
-          <label className="group relative bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-full cursor-pointer transition-all duration-300 shadow-lg hover:shadow-indigo-500/25 flex items-center gap-2 overflow-hidden">
+          {/* <label className="group relative bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-full cursor-pointer transition-all duration-300 shadow-lg hover:shadow-indigo-500/25 flex items-center gap-2 overflow-hidden">
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
             <svg className="w-5 h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
             <span className="relative z-10 font-medium text-sm">Upload Book</span>
@@ -79,10 +84,10 @@ export default function Header({ setStoredData }: HeaderProps) {
               onChange={handlePdfChange}
               className="hidden"
             />
-          </label>
+          </label> */}
 
           {/* Profile Image */}
-          <label className="cursor-pointer relative group">
+          {/* <label className="cursor-pointer relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-cyan-500 rounded-full opacity-75 group-hover:opacity-100 blur transition duration-300"></div>
             <img
               src={
@@ -99,7 +104,7 @@ export default function Header({ setStoredData }: HeaderProps) {
               onChange={handleImageChange}
               className="hidden"
             />
-          </label>
+          </label> */}
 
         </div>
       </div>
