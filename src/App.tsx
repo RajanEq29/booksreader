@@ -1,20 +1,36 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './src/Home';
-
 import FurnitureHeritageUI from './src/HomeScreen/Index';
+import Admin from './src/Admin/Admin';
+import { useEffect } from 'react';
+
+
+
+import PageTracker from './PageTracker';
+
+import { initClarity } from './clarity';
+import TrackingManager from './components/TrackingManager';
+
 
 function App() {
+
+  useEffect(() => {
+   
+    initClarity();
+  }, []);
+
   return (
     <Router>
+      <PageTracker />
+      <TrackingManager />
       <Routes>
-        {/* This is your landing page with the cards */}
         <Route path="/" element={<FurnitureHeritageUI />} />
-
-        {/* This is the page you go to when you click a card */}
         <Route path="/home/:id" element={<Home />} />
+        <Route path="/admin" element={<Admin />} />
       </Routes>
     </Router>
   );
 }
 
 export default App;
+

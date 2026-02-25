@@ -4,6 +4,7 @@ import Header from "./Header";
 import HTMLFlipBook from "react-pageflip";
 import { Document, Page, pdfjs } from "react-pdf";
 import { ArrowRight } from "lucide-react";
+import { trackVisitStart } from '../utils/tracking';
 import frist from '../assets/pdf/Fabric_Shades_Collection FOR KIRSTY.pdf'
 import frist1 from '../assets/pdf/WoodTech Spectra.pdf'
 import catalogPdf from '../assets/pdf/BASICS-E-Catalog (5).pdf'
@@ -40,6 +41,21 @@ export default function Home() {
   // Note: Blobs from localStorage are often dead after refresh.
   const pdfUrl = (storedData?.pdfFile?.startsWith('blob:') ? storedData.pdfFile : null) || getPdfById(id);
 
+  // Track visit on mount
+  useEffect(() => {
+    if (!id) return;
+
+    // Titles fallback
+    const titles: Record<string, string> = {
+      '1': 'Living Rooms',
+      '2': 'Chairs',
+      '3': 'Living Rooms'
+    };
+    const bookTitle = titles[id] || `Book #${id}`;
+
+    trackVisitStart(id, bookTitle);
+  }, [id]);
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -60,6 +76,19 @@ export default function Home() {
   const onFlip = useCallback((e: { data: number }) => {
     setCurrentPage(e.data);
   }, []);
+
+  // Sync with tracking state
+  useEffect(() => {
+    import('../utils/trackingState').then(({ trackingState }) => {
+      trackingState.currentPageIndex = currentPage;
+    });
+    // Cleanup on unmount
+    return () => {
+      import('../utils/trackingState').then(({ trackingState }) => {
+        trackingState.currentPageIndex = undefined;
+      });
+    };
+  }, [currentPage]);
 
   // Sync input with current page
   useEffect(() => {
@@ -86,7 +115,7 @@ export default function Home() {
     if (windowWidth < 1024) { // Mobile & Tablet
       return {
         width: windowWidth * 0.95,
-        height: Math.min(window.innerHeight * 0.4, availableHeight + 50)
+        height: Math.min(window.innerHeight * 0.75, availableHeight + 50)
       };
     } else if (windowWidth < 1440) {
       const w = Math.min(480, windowWidth * 0.4);
@@ -252,7 +281,7 @@ export default function Home() {
 
             <div className="">
               {numPages && (
-           
+
                 <div className="flex items-center mt-3 gap-3 px-2 py-1 bg-white/70 backdrop-blur-2xl border border-white rounded-[2rem] shadow-[0_20px_50px_rgba(141,91,65,0.15)] z-50 transition-all hover:bg-white/90 max-w-[95vw]">
 
 

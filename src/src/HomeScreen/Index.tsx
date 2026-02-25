@@ -3,20 +3,26 @@ import thiad from '../../assets/image/thiad.jpeg'
 import sec from '../../assets/image/sec.png'
 import chair1 from '../../assets/image/first.png'
 import { useNavigate } from 'react-router-dom';
-import logo from '../../assets/image/Group 1171282670.png'
+import logo from '../../assets/image/logo.png'
 import { useState, useEffect } from 'react';
+import { trackVisitStart } from '../../utils/tracking';
 
 export default function FurnitureHeritageUI() {
   const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  // const [ setOtp] = useState('');
+  const [userOtp, setUserOtp] = useState('');
+  const [isOtpStep, setIsOtpStep] = useState(false);
+
+  
 
   const [formData, setFormData] = useState({
     name: '',
-    content: '',
     phone: '',
-    message: ''
+    message: '',
+    content: ''
   });
 
   useEffect(() => {
@@ -28,6 +34,8 @@ export default function FurnitureHeritageUI() {
 
   const handleCardClick = (id: number) => {
     if (isSubmitted) {
+      const book = books.find(b => b.id === id);
+      if (book) trackVisit(book.id, book.title);
       navigate(`/home/${id}`);
     } else {
       setSelectedId(id);
@@ -42,16 +50,57 @@ export default function FurnitureHeritageUI() {
       return;
     }
 
-    // Save to localStorage
-    localStorage.setItem('book_form_submitted', 'true');
-    localStorage.setItem('book_user_data', JSON.stringify(formData));
-    setIsSubmitted(true);
-    setShowForm(false);
+   
+    setIsOtpStep(true);
+    setUserOtp(''); 
+  };
 
-    if (selectedId) {
-      navigate(`/home/${selectedId}`);
+
+  const trackVisit = (bookId: number | string, bookTitle: string) => {
+    trackVisitStart(bookId, bookTitle, `/home/${bookId}`);
+  };
+
+  const handleOtpVerify = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (userOtp.length < 6) {
+      alert("Please enter complete OTP");
+      return;
+    }
+
+    if (userOtp) {
+      const existingUsersStr = localStorage.getItem('all_users_data');
+      const existingUsers = existingUsersStr ? JSON.parse(existingUsersStr) : [];
+
+      const userId = Date.now().toString();
+      const newUser = {
+        ...formData,
+        id: userId,
+        createdAt: new Date().toISOString(),
+        visits: []
+      };
+
+      const updatedUsers = [...existingUsers, newUser];
+
+      localStorage.setItem('all_users_data', JSON.stringify(updatedUsers));
+      localStorage.setItem('current_user_id', userId); 
+      localStorage.setItem('book_form_submitted', 'true');
+      localStorage.setItem('book_user_data', JSON.stringify(formData));
+
+      setIsSubmitted(true);
+      setShowForm(false);
+      setIsOtpStep(false);
+
+      if (selectedId) {
+        const book = books.find(b => b.id === selectedId);
+        if (book) trackVisit(book.id, book.title);
+        navigate(`/home/${selectedId}`);
+      }
+    } else {
+      alert("Invalid OTP. Try again");
     }
   };
+
 
   const books = [
     { id: 1, title: "Living Rooms", image: chair1, description: "Masterpieces of modern comfort." },
@@ -68,12 +117,14 @@ export default function FurnitureHeritageUI() {
   return (
     <div className="min-h-screen w-full bg-white font-sans text-[#2C2C2C] overflow-x-hidden">
       {/* Hero Section with Peach Background */}
-      <div className="w-full bg-[#FED6A8] pb-60 pt-6 md:pt-10 h-auto min-h-[50vh] md:min-h-[75vh] rounded-b-[35px] md:rounded-b-[40px] relative">
-        <nav className="max-w-7xl mx-auto w-full grid grid-cols-2 md:grid-cols-3 items-center px-6 md:px-8 py-4">
+      <div className="w-full bg-[#FED6A8] pb-60 pt-2 md:pt-5 h-auto min-h-[50vh] md:min-h-[75vh] rounded-b-[35px] md:rounded-b-[40px] relative">
+        <nav className="max-w-7xl mx-auto w-full grid grid-cols-2 md:grid-cols-3 items-center px-6 md:px-4 py-1">
           {/* Logo Container */}
           <div className="flex items-center gap-3 cursor-pointer group">
             <div className=" p-2.5 ">
-              <img src={logo} alt="" />
+              <img src={logo} alt=""
+                className="h-30 md:h-22 lg:h-25 w-auto object-contain"
+              />
             </div>
 
           </div>
@@ -85,17 +136,20 @@ export default function FurnitureHeritageUI() {
             <a href="#" className="hover:text-[#8D5B41] transition-colors">About</a>
           </div> */}
 
-          {/* Login Button */}
+          {/* Admin Button */}
           {/* <div className="flex justify-end">
-            <button className="bg-[#8D5B41] text-white px-6 md:px-8 py-2 md:py-3 rounded-full text-sm font-semibold hover:bg-[#744933] transition-all shadow-md active:scale-95">
-              Login
+            <button
+              onClick={() => navigate('/admin')}
+              className="bg-[#8D5B41] text-white px-6 md:px-8 py-2 md:py-3 rounded-full text-sm font-semibold hover:bg-[#744933] transition-all shadow-md active:scale-95"
+            >
+              Admin
             </button>
           </div> */}
         </nav>
 
         {/* Hero Text */}
-        <section className="max-w-6xl mx-auto w-full px-6 pt-8 text-center">
-          <h1 className="font-serif text-4xl md:text-5xl lg:text-7xl font-bold mb-6 md:mb-8 text-[#1A1A1A] tracking-tight leading-[1.1]">
+        <section className="max-w-6xl mx-auto w-full px-6 pt-4 text-center">
+          <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold mb-6 md:mb-8 text-[#1A1A1A] tracking-tight leading-[1.1]">
             Masterpiece  Craftsmanship
             {/* <br className="hidden md:block" /> */}
           </h1>
@@ -106,7 +160,7 @@ export default function FurnitureHeritageUI() {
       </div>
 
       {/* Grid Section - Responsive Overlap */}
-      <section className="relative w-full -mt-50 md:-mt-79 lg:-mt-90 z-10">
+      <section className="relative w-full -mt-38 md:-mt-65 lg:-mt-75 z-10">
         <div className="max-w-7xl mx-auto w-full px-6 md:px-8 py-12 md:py-24">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 md:gap-x-12 gap-y-16 md:gap-y-20">
             {books.map((item, index) => (
@@ -114,6 +168,7 @@ export default function FurnitureHeritageUI() {
                 key={index}
                 className="group cursor-pointer flex flex-col w-full"
                 onClick={() => handleCardClick(item.id)}
+
               >
                 {/* Book Cover Container with fixed aspect ratio */}
                 <div className="relative w-full aspect-[3/4] md:aspect-[4/5] overflow-hidden rounded-[24px] md:rounded-[32px] flex items-center justify-center transition-all duration-500 bg-gray-100 shadow-[0_10px_30px_rgba(0,0,0,0.05)] group-hover:shadow-[0_40px_80px_rgba(141,91,65,0.25)] group-hover:-translate-y-4">
@@ -147,12 +202,13 @@ export default function FurnitureHeritageUI() {
       </section>
 
       {/* Footer Section */}
-      <footer className="w-full bg-[#F3EBE3] py-16 md:py-24 flex flex-col items-center rounded-t-[35px] md:rounded-t-[40px]">
+      <footer className="w-full bg-[#F3EBE3] py-10 md:py-14 flex flex-col items-center rounded-t-[35px] md:rounded-t-[40px]">
         {/* Footer Logo */}
         <div className="flex flex-col items-center mb-12">
 
           <div className=" p-2.5 ">
-            <img src={logo} alt="" />
+            <img src={logo} alt=""
+              className="h-30 md:h-22 lg:h-25 w-auto object-contain" />
           </div>
 
 
@@ -184,7 +240,10 @@ export default function FurnitureHeritageUI() {
             {/* Header with Peach Background */}
             <div className="bg-[#FED6A8] p-8 md:p-10 relative">
               <button
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                  setShowForm(false);
+                  setIsOtpStep(false);
+                }}
                 className="absolute top-6 right-6 p-2 bg-white/50 hover:bg-white rounded-full transition-colors active:scale-90"
               >
                 <X className="w-5 h-5 text-[#8D5B41]" />
@@ -195,83 +254,149 @@ export default function FurnitureHeritageUI() {
               </div>
 
               <h2 className="font-serif text-3xl font-bold text-[#1A1A1A] mb-3">
-                Unlock Heritage Catalog
+                {isOtpStep ? "Verify OTP" : "Unlock Heritage Catalog"}
               </h2>
               <p className="text-[#2C2C2C]/70 text-sm leading-relaxed max-w-xs">
-                Please provide your details to view our curated collection and masterpieces.
+                {isOtpStep
+                  ? "We've generated an OTP for you. Please enter it below to continue."
+                  : "Please provide your details to view our curated collection and masterpieces."}
               </p>
             </div>
 
             {/* Form Content */}
-            <form onSubmit={handleSubmit} className="p-8 md:p-10 bg-white space-y-5">
-              <div className="space-y-4">
-                {/* Name Field */}
-                <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#8D5B41] text-[#2C2C2C]/30">
-                    <User className="w-5 h-5" />
+            {!isOtpStep ? (
+              <form onSubmit={handleSubmit} className="p-8 md:p-10 bg-white space-y-5">
+                <div className="space-y-4">
+                  {/* Name Field */}
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#8D5B41] text-[#2C2C2C]/30">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Full Name"
+                      required
+
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full bg-gray-50 border-2 border-transparent focus:border-[#FED6A8] focus:bg-white rounded-2xl py-4 pl-12 pr-4 text-sm font-medium transition-all outline-none"
+                    />
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Full Name"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-gray-50 border-2 border-transparent focus:border-[#FED6A8] focus:bg-white rounded-2xl py-4 pl-12 pr-4 text-sm font-medium transition-all outline-none"
-                  />
+
+                  {/* Mobile Number Field */}
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#8D5B41] text-[#2C2C2C]/30">
+                      <Phone className="w-5 h-5" />
+                    </div>
+                    <input
+                      type="number"
+                      placeholder="Mobile Number"
+                      required
+                      // max={10}
+                      min={10}
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full bg-gray-50 border-2 border-transparent focus:border-[#FED6A8] focus:bg-white rounded-2xl py-4 pl-12 pr-4 text-sm font-medium transition-all outline-none"
+                    />
+                  </div>
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#8D5B41] text-[#2C2C2C]/30">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Email (Optional)"
+                      value={formData.content}
+                      onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                      className="w-full bg-gray-50 border-2 border-transparent focus:border-[#FED6A8] focus:bg-white rounded-2xl py-4 pl-12 pr-4 text-sm font-medium transition-all outline-none"
+                    />
+                  </div>
+
+                  {/* Message Field */}
+                  <div className="relative group">
+                    <div className="absolute left-4 top-5 transition-colors group-focus-within:text-[#8D5B41] text-[#2C2C2C]/30">
+                      <MessageSquare className="w-5 h-5" />
+                    </div>
+                    <textarea
+                      placeholder="Message (Optional)"
+                      rows={3}
+                      value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                      className="w-full bg-gray-50 border-2 border-transparent focus:border-[#FED6A8] focus:bg-white rounded-2xl py-4 pl-12 pr-4 text-sm font-medium transition-all outline-none resize-none"
+                    ></textarea>
+                  </div>
                 </div>
 
-                {/* Mobile Number Field */}
-                <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#8D5B41] text-[#2C2C2C]/30">
-                    <Phone className="w-5 h-5" />
-                  </div>
-                  <input
-                    type="tel"
-                    placeholder="Mobile Number"
-                    required
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-gray-50 border-2 border-transparent focus:border-[#FED6A8] focus:bg-white rounded-2xl py-4 pl-12 pr-4 text-sm font-medium transition-all outline-none"
-                  />
+                <button
+                  type="submit"
+                  className="w-full bg-[#8D5B41] hover:bg-[#744933] text-white font-bold py-5 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-lg shadow-[#8D5B41]/20 mt-4 group"
+                >
+                  Generate OTP
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleOtpVerify} className="p-8 md:p-10 bg-white space-y-6">
+
+
+                <div className="flex justify-between gap-2 max-w-xs mx-auto">
+                  {[0, 1, 2, 3, 4, 5].map((index) => (
+                    <input
+                      key={index}
+                      id={`otp-${index}`}
+                      type="text"
+                      maxLength={1}
+                      className="w-10 h-12 md:w-12 md:h-14 bg-gray-50 border-2 border-transparent focus:border-[#FED6A8] focus:bg-white rounded-xl text-center text-xl md:text-2xl font-bold text-[#8D5B41] outline-none"
+                      value={userOtp[index] || ""}
+
+                      onChange={(e) => {
+                        const val = e.target.value;
+
+                        // allow only numbers
+                        if (!/^\d*$/.test(val)) return;
+
+                        let otpArray = userOtp.split("");
+                        while (otpArray.length < 6) otpArray.push("");
+
+                        otpArray[index] = val.slice(-1);
+
+                        const newOtp = otpArray.join("").slice(0, 6);
+                        setUserOtp(newOtp);
+
+                        // move forward
+                        if (val && index < 5) {
+                          document.getElementById(`otp-${index + 1}`)?.focus();
+                        }
+                      }}
+
+                      onKeyDown={(e) => {
+                        // move back on backspace
+                        if (e.key === "Backspace" && !userOtp[index] && index > 0) {
+                          document.getElementById(`otp-${index - 1}`)?.focus();
+                        }
+                      }}
+                    />
+                  ))}
                 </div>
 
-                {/* Content Field (Ambiguous - as requested) */}
-                <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#8D5B41] text-[#2C2C2C]/30">
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Content / Subject"
-                    value={formData.content}
-                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                    className="w-full bg-gray-50 border-2 border-transparent focus:border-[#FED6A8] focus:bg-white rounded-2xl py-4 pl-12 pr-4 text-sm font-medium transition-all outline-none"
-                  />
-                </div>
 
-                {/* Message Field */}
-                <div className="relative group">
-                  <div className="absolute left-4 top-5 transition-colors group-focus-within:text-[#8D5B41] text-[#2C2C2C]/30">
-                    <MessageSquare className="w-5 h-5" />
-                  </div>
-                  <textarea
-                    placeholder="Message (Optional)"
-                    rows={3}
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full bg-gray-50 border-2 border-transparent focus:border-[#FED6A8] focus:bg-white rounded-2xl py-4 pl-12 pr-4 text-sm font-medium transition-all outline-none resize-none"
-                  ></textarea>
-                </div>
-              </div>
+                <button
+                  type="submit"
+                  className="w-full bg-[#8D5B41] hover:bg-[#744933] text-white font-bold py-5 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-lg shadow-[#8D5B41]/20 mt-4 group"
+                >
+                  Verify Now
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
 
-              <button
-                type="submit"
-                className="w-full bg-[#8D5B41] hover:bg-[#744933] text-white font-bold py-5 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-lg shadow-[#8D5B41]/20 mt-4 group"
-              >
-                Access Catalog
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </form>
+                <button
+                  type="button"
+                  onClick={() => setIsOtpStep(false)}
+                  className="w-full text-sm font-semibold text-[#8D5B41] hover:underline transition-all"
+                >
+                  Change details
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}

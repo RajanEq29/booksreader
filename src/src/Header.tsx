@@ -1,5 +1,5 @@
 // import { useState, useEffect, type ChangeEvent } from "react";
-import logo from '../assets/image/Group 1171282670.png'
+import logo from '../assets/image/logo.png'
 
 // interface StoredData {
 //   image: string | null;
@@ -68,7 +68,9 @@ export default function Header() {
     <header className="w-full bg-[#FED6A8] ">
       <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
         <div className="">
-          <img src={logo} alt="" />
+          <img src={logo} alt=""
+           className="h-20 md:h-15 lg:h-20 w-auto object-contain"
+          />
         </div>
 
         <div className="flex items-center gap-6">
