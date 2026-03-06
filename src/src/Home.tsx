@@ -79,8 +79,10 @@ export default function Home() {
 
   // Sync with tracking state
   useEffect(() => {
-    import('../utils/trackingState').then(({ trackingState }) => {
-      trackingState.currentPageIndex = currentPage;
+    import('../utils/trackingState').then(async ({ trackingState }) => {
+      const { syncCurrentTime } = await import('../utils/tracking');
+      await syncCurrentTime(); // Sync time on old page
+      trackingState.currentPageIndex = currentPage; // Switch to new page index
     });
     // Cleanup on unmount
     return () => {
@@ -90,7 +92,7 @@ export default function Home() {
     };
   }, [currentPage]);
 
-  // Sync input with current page
+  
   useEffect(() => {
     setInputPage((currentPage + 1).toString());
   }, [currentPage]);
@@ -99,15 +101,12 @@ export default function Home() {
     e.preventDefault();
     const pageNum = parseInt(inputPage, 10);
     if (bookRef.current && numPages && pageNum >= 1 && pageNum <= numPages + 2) {
-      // Validating page range (including covers)
+ 
       bookRef.current.pageFlip().flip(pageNum - 1);
     }
   };
 
-  // Dynamic Dimensions
-  // Mobile/Tablet (< 1024px): Single page (Portrait)
-  // Laptop (1024px - 1440px): Double page (Landscape)
-  // Desktop (> 1440px): Double page (Landscape) (Larger)
+ 
   const getDimensions = () => {
 
     const availableHeight = window.innerHeight - 10

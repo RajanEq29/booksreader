@@ -16,7 +16,7 @@ export default function FurnitureHeritageUI() {
   const [userOtp, setUserOtp] = useState('');
   const [isOtpStep, setIsOtpStep] = useState(false);
 
-  
+
 
   const [formData, setFormData] = useState({
     name: '',
@@ -50,9 +50,9 @@ export default function FurnitureHeritageUI() {
       return;
     }
 
-   
+
     setIsOtpStep(true);
-    setUserOtp(''); 
+    setUserOtp('');
   };
 
 
@@ -69,23 +69,14 @@ export default function FurnitureHeritageUI() {
     }
 
     if (userOtp) {
-      const existingUsersStr = localStorage.getItem('all_users_data');
-      const existingUsers = existingUsersStr ? JSON.parse(existingUsersStr) : [];
-
       const userId = Date.now().toString();
-      const newUser = {
-        ...formData,
-        id: userId,
-        createdAt: new Date().toISOString(),
-        visits: []
-      };
-
-      const updatedUsers = [...existingUsers, newUser];
-
-      localStorage.setItem('all_users_data', JSON.stringify(updatedUsers));
-      localStorage.setItem('current_user_id', userId); 
+      localStorage.setItem('backend_id', userId);
       localStorage.setItem('book_form_submitted', 'true');
       localStorage.setItem('book_user_data', JSON.stringify(formData));
+
+      import('../../utils/trackingState').then(({ trackingState }) => {
+        trackingState.backendId = userId;
+      });
 
       setIsSubmitted(true);
       setShowForm(false);

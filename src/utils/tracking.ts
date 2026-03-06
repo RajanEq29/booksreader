@@ -1,3 +1,4 @@
+import { createVisit, addVisitToUser } from '../services/api';
 
 export interface UserVisit {
     id: string | number;
@@ -12,83 +13,120 @@ export interface UserData {
     id: string;
     name: string;
     phone: string;
-    content: string;
+    email: string;
     message?: string;
     createdAt: string;
     visits: UserVisit[];
     totalTimeSpent: number; // in seconds
+    backendId?: string; // ID from MongoDB
 }
 
-export const trackVisitStart = (bookId: string | number, bookTitle: string, manualPath?: string) => {
-    const currentUserId = localStorage.getItem('current_user_id');
-    if (!currentUserId) return;
+export const trackVisitStart = async (bookId: string | number, bookTitle: string, manualPath?: string) => {
+    const { trackingState } = await import('./trackingState');
 
-    const allUsersStr = localStorage.getItem('all_users_data');
-    if (!allUsersStr) return;
+    // Sync any existing time before starting a new visit
+    await syncCurrentTime();
 
-    const allUsers: UserData[] = JSON.parse(allUsersStr);
-    const userIndex = allUsers.findIndex((u) => u.id === currentUserId);
-
-    if (userIndex !== -1) {
+    try {
         const visitPath = manualPath || window.location.pathname;
         const visit: UserVisit = {
             id: bookId,
             title: bookTitle,
-            timestamp: new Date().toISOString(),
+            timestamp: new Date().toISOString().replace('Z', '+00:00'),
             path: visitPath,
             duration: 0,
             pageVisits: {}
         };
 
-        if (!allUsers[userIndex].visits) {
-            allUsers[userIndex].visits = [];
+        trackingState.currentVisit = visit;
+        trackingState.lastUpdateTime = Date.now();
+
+        // Clear any previous pending timer
+        if (trackingState.pendingVisitTimer) {
+            clearTimeout(trackingState.pendingVisitTimer);
         }
 
-        const visits = allUsers[userIndex].visits;
-        // We only add a new visit if the ID or path changed
-        const lastVisit = visits.length > 0 ? visits[visits.length - 1] : null;
+        // Just set the timer to validate the visit.
+        // API calls only happen on interaction (page change/navigation) AFTER this timer clears.
+        trackingState.pendingVisitTimer = setTimeout(() => {
+            trackingState.pendingVisitTimer = null;
+        }, 5000);
 
-        if (!lastVisit || lastVisit.path !== visitPath || lastVisit.id !== bookId) {
-            allUsers[userIndex].visits.push(visit);
-            localStorage.setItem('all_users_data', JSON.stringify(allUsers));
-        }
+    } catch (error) {
+        console.error("Error in trackVisitStart:", error);
     }
 };
 
-export const updateTimeSpent = (timeIncrement: number, currentPageIndex?: number) => {
-    const currentUserId = localStorage.getItem('current_user_id');
-    if (!currentUserId) return;
+export const syncCurrentTime = async () => {
+    const { trackingState } = await import('./trackingState');
+    const now = Date.now();
+    const deltaSeconds = Math.floor((now - trackingState.lastUpdateTime) / 1000);
 
-    const allUsersStr = localStorage.getItem('all_users_data');
-    if (!allUsersStr) return;
+    if (deltaSeconds > 0) {
+        await updateTimeSpent(deltaSeconds, trackingState.currentPageIndex);
+    }
+
+    trackingState.lastUpdateTime = now;
+};
+
+export const cancelPendingVisitTracking = async () => {
+    const { trackingState } = await import('./trackingState');
+    if (trackingState.pendingVisitTimer) {
+        clearTimeout(trackingState.pendingVisitTimer);
+        trackingState.pendingVisitTimer = null;
+    }
+};
+
+export const updateTimeSpent = async (timeIncrement: number, currentPageIndex?: number) => {
+    const { trackingState } = await import('./trackingState');
+    if (!trackingState.currentVisit) return;
 
     try {
-        const allUsers: UserData[] = JSON.parse(allUsersStr);
-        const userIndex = allUsers.findIndex((u) => u.id === currentUserId);
+        const currentVisit = trackingState.currentVisit;
+        console.log("--------86",currentVisit)
+        currentVisit.duration = (currentVisit.duration || 0) + timeIncrement;
 
-        if (userIndex !== -1) {
-            const user = allUsers[userIndex];
+        if (currentPageIndex !== undefined) {
+            if (!currentVisit.pageVisits) {
+                currentVisit.pageVisits = {};
+            }
+            currentVisit.pageVisits[currentPageIndex] = (currentVisit.pageVisits[currentPageIndex] || 0) + timeIncrement;
+        }
 
-            // Update total time
-            user.totalTimeSpent = (user.totalTimeSpent || 0) + timeIncrement;
 
-            // Update current visit duration
-            if (user.visits && user.visits.length > 0) {
-                const currentVisit = user.visits[user.visits.length - 1];
+        if (!trackingState.pendingVisitTimer) {
+            const visitPayload = {
+                id: currentVisit.id,
+                title: currentVisit.title,
+                path: currentVisit.path,
+                timestamp: currentVisit.timestamp,
+                duration: currentVisit.duration,
+                pageVisits: { ...currentVisit.pageVisits }
+            };
 
-                // Check if current page is within a book (path starts with /home or similar)
-                // If so, update both total duration and page-specific duration
-                currentVisit.duration = (currentVisit.duration || 0) + timeIncrement;
+            console.log(visitPayload);
 
-                if (currentPageIndex !== undefined) {
-                    if (!currentVisit.pageVisits) {
-                        currentVisit.pageVisits = {};
+            if (trackingState.backendId) {
+                const response = await addVisitToUser(trackingState.backendId, visitPayload).catch(err =>
+                    console.error("Error syncing time spent to backend:", err)
+                );
+                console.log(response);
+            } else {
+                // First sync for a new user/session that has filled the form
+                const userDataStr = localStorage.getItem('book_user_data');
+                if (userDataStr) {
+                    const userData = JSON.parse(userDataStr);
+                    const result = await createVisit({
+                        ...userData,
+                        visits: [visitPayload],
+                        totalTimeSpent: currentVisit.duration
+                    });
+                    if (result.success) {
+                        trackingState.backendId = result.data._id;
+                        localStorage.setItem('backend_id', result.data._id);
                     }
-                    currentVisit.pageVisits[currentPageIndex] = (currentVisit.pageVisits[currentPageIndex] || 0) + timeIncrement;
                 }
             }
-
-            localStorage.setItem('all_users_data', JSON.stringify(allUsers));
         }
     } catch (error) {
         console.error("Error updating time spent:", error);

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Users, LayoutDashboard, Settings, LogOut, ChevronRight, User, Mail, MessageSquare, FileText } from 'lucide-react';
+import { getAllVisits } from '../../services/api';
 
 interface UserVisit {
   id: string | number;
@@ -26,43 +27,42 @@ function Admin() {
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState('users');
   const [expandedVisit, setExpandedVisit] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadedUsers = localStorage.getItem('all_users_data');
-    console.log(loadedUsers)
-    if (loadedUsers) {
-      setUsers(JSON.parse(loadedUsers));
-    } else {
-      // Mock data for demonstration if no users exist
-      const mockUsers: UserData[] = [
-        {
-          id: '1',
-          name: 'John Doe',
-          phone: '1234567890',
-          content: 'john@example.com',
-          message: 'Interested in the Living Room collection.',
-          createdAt: new Date().toISOString(),
-          totalTimeSpent: 300,
-          visits: [
-            { id: 1, title: 'Living Rooms', timestamp: new Date().toISOString(), path: '/home/1', duration: 120, pageVisits: { 0: 60, 1: 60 } },
-            { id: 2, title: 'Chairs', timestamp: new Date().toISOString(), path: '/home/2', duration: 180, pageVisits: { 0: 180 } }
-          ]
-        },
-        {
-          id: '2',
-          name: 'Jane Smith',
-          phone: '9876543210',
-          content: 'jane@example.com',
-          message: 'Can I get a custom chair?',
-          createdAt: new Date().toISOString(),
-          totalTimeSpent: 150,
-          visits: [
-            { id: 3, title: 'Living Rooms', timestamp: new Date().toISOString(), path: '/home/3', duration: 150, pageVisits: { 0: 150 } }
-          ]
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const result = await getAllVisits();
+        if (result.success && result.data && result.data.length > 0) {
+          // Map backend data to frontend UserData interface
+          const mappedUsers = result.data.map((u: any) => ({
+            id: u._id,
+            name: u.name,
+            phone: u.phone,
+            content: u.email || '',
+            message: u.message,
+            createdAt: u.createdAt,
+            visits: u.visits.map((v: any) => ({
+              id: v.id,
+              title: v.title,
+              timestamp: v.timestamp,
+              path: v.path,
+              duration: v.duration,
+              pageVisits: v.pageVisits instanceof Map ? Object.fromEntries(v.pageVisits) : (v.pageVisits || {})
+            })),
+            totalTimeSpent: u.totalTimeSpent
+          }));
+          setUsers(mappedUsers);
         }
-      ];
-      setUsers(mockUsers);
-    }
+      } catch (error) {
+        console.error("Error fetching from backend:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   const formatTime = (seconds?: number) => {
@@ -135,7 +135,12 @@ function Admin() {
         </header>
 
         <main className="p-8">
-          {activeTab === 'users' && (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center h-[60vh]">
+              <div className="w-12 h-12 border-4 border-[#8D5B41] border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="text-gray-500 font-medium">Loading analytics...</p>
+            </div>
+          ) : activeTab === 'users' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Users List Column */}
               <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">

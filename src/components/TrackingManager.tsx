@@ -1,20 +1,19 @@
 
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { updateTimeSpent } from '../utils/tracking';
-import { trackingState } from '../utils/trackingState';
+import { syncCurrentTime } from '../utils/tracking';
 
-const TRACKING_INTERVAL = 5000; // Update every 5 seconds
+const TRACKING_INTERVAL = 10000; // Sync every 10 seconds
 
 export default function TrackingManager() {
     const location = useLocation();
 
     useEffect(() => {
-        const interval = setInterval(() => {
-            updateTimeSpent(TRACKING_INTERVAL / 1000, trackingState.currentPageIndex);
-        }, TRACKING_INTERVAL);
-
-        return () => clearInterval(interval);
+        // We no longer sync periodically. 
+        // Sync happens on page flips (Home.tsx) or when navigating away (cleanup below).
+        return () => {
+            syncCurrentTime(); // Final sync before route change
+        };
     }, [location.pathname]);
 
     return null;
