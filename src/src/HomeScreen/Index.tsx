@@ -60,7 +60,7 @@ export default function FurnitureHeritageUI() {
     trackVisitStart(bookId, bookTitle, `/home/${bookId}`);
   };
 
-  const handleOtpVerify = (e: React.FormEvent) => {
+  const handleOtpVerify = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (userOtp.length < 6) {
@@ -68,27 +68,43 @@ export default function FurnitureHeritageUI() {
       return;
     }
 
-    if (userOtp) {
-      const userId = Date.now().toString();
-      localStorage.setItem('backend_id', userId);
-      localStorage.setItem('book_form_submitted', 'true');
-      localStorage.setItem('book_user_data', JSON.stringify(formData));
+    try {
+      // Import the API service
+      const { createVisit } = await import('../../services/api');
 
-      import('../../utils/trackingState').then(({ trackingState }) => {
-        trackingState.backendId = userId;
+      const result = await createVisit({
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.content, // Mapping content to email as per current form usage
+        message: formData.message,
+        visits: [],
+        totalTimeSpent: 0
       });
 
-      setIsSubmitted(true);
-      setShowForm(false);
-      setIsOtpStep(false);
+      if (result.success) {
+        const userId = result.data._id;
+        localStorage.setItem('backend_id', userId);
+        localStorage.setItem('book_form_submitted', 'true');
+        localStorage.setItem('book_user_data', JSON.stringify(formData));
 
-      if (selectedId) {
-        const book = books.find(b => b.id === selectedId);
-        if (book) trackVisit(book.id, book.title);
-        navigate(`/home/${selectedId}`);
+        const { trackingState } = await import('../../utils/trackingState');
+        trackingState.backendId = userId;
+
+        setIsSubmitted(true);
+        setShowForm(false);
+        setIsOtpStep(false);
+
+        if (selectedId) {
+          const book = books.find(b => b.id === selectedId);
+          if (book) trackVisit(book.id, book.title);
+          navigate(`/home/${selectedId}`);
+        }
+      } else {
+        alert("Failed to create account. Please try again.");
       }
-    } else {
-      alert("Invalid OTP. Try again");
+    } catch (error) {
+      console.error("Error verifying OTP/Creating visit:", error);
+      alert("Something went wrong. Please try again.");
     }
   };
 

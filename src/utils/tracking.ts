@@ -6,7 +6,7 @@ export interface UserVisit {
     timestamp: string;
     path: string;
     duration: number; // in seconds
-    pageVisits?: Record<number, number>; // pageIndex -> duration in seconds
+    pageVisits?: Record<string, number>; // sub-path -> duration in seconds
 }
 
 export interface UserData {
@@ -83,14 +83,15 @@ export const updateTimeSpent = async (timeIncrement: number, currentPageIndex?: 
 
     try {
         const currentVisit = trackingState.currentVisit;
-        console.log("--------86",currentVisit)
         currentVisit.duration = (currentVisit.duration || 0) + timeIncrement;
 
         if (currentPageIndex !== undefined) {
             if (!currentVisit.pageVisits) {
                 currentVisit.pageVisits = {};
             }
-            currentVisit.pageVisits[currentPageIndex] = (currentVisit.pageVisits[currentPageIndex] || 0) + timeIncrement;
+            // Create a sub-path for the page (e.g., /home/2/page-1)
+            const subPath = `${currentVisit.path}/page-${currentPageIndex + 1}`;
+            currentVisit.pageVisits[subPath] = (currentVisit.pageVisits[subPath] || 0) + timeIncrement;
         }
 
 
@@ -104,20 +105,20 @@ export const updateTimeSpent = async (timeIncrement: number, currentPageIndex?: 
                 pageVisits: { ...currentVisit.pageVisits }
             };
 
-            console.log(visitPayload);
-
             if (trackingState.backendId) {
-                const response = await addVisitToUser(trackingState.backendId, visitPayload).catch(err =>
+                await addVisitToUser(trackingState.backendId, visitPayload).catch(err =>
                     console.error("Error syncing time spent to backend:", err)
                 );
-                console.log(response);
             } else {
                 // First sync for a new user/session that has filled the form
                 const userDataStr = localStorage.getItem('book_user_data');
                 if (userDataStr) {
                     const userData = JSON.parse(userDataStr);
                     const result = await createVisit({
-                        ...userData,
+                        name: userData.name,
+                        phone: userData.phone,
+                        email: userData.email || userData.content, // Handle 'content' alias from HomeScreen
+                        message: userData.message,
                         visits: [visitPayload],
                         totalTimeSpent: currentVisit.duration
                     });

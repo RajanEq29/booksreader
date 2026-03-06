@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, LayoutDashboard, Settings, LogOut, ChevronRight, User, Mail, MessageSquare, FileText } from 'lucide-react';
+import { Users, LayoutDashboard, LogOut, ChevronRight, User, Mail, MessageSquare, FileText } from 'lucide-react';
 import { getAllVisits } from '../../services/api';
 
 interface UserVisit {
@@ -25,16 +25,17 @@ interface UserData {
 function Admin() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
-  const [activeTab, setActiveTab] = useState('users');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [expandedVisit, setExpandedVisit] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<'recent' | 'name' | 'engagement'>('recent');
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         const result = await getAllVisits();
-        if (result.success && result.data && result.data.length > 0) {
+        if (result.success && result.data) {
           // Map backend data to frontend UserData interface
           const mappedUsers = result.data.map((u: any) => ({
             id: u._id,
@@ -78,6 +79,20 @@ function Admin() {
     return res.trim();
   };
 
+  const getSortedUsers = () => {
+    return [...users].sort((a, b) => {
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'engagement') return (b.totalTimeSpent || 0) - (a.totalTimeSpent || 0);
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  };
+
+  const stats = {
+    totalUsers: users.length,
+    totalSessions: users.reduce((acc: number, user: UserData) => acc + (user.visits?.length || 0), 0),
+    totalTime: users.reduce((acc: number, user: UserData) => acc + (user.totalTimeSpent || 0), 0)
+  };
+
   return (
     <div className="flex h-screen bg-[#F8F9FA] overflow-hidden">
       {/* Sidebar */}
@@ -87,13 +102,13 @@ function Admin() {
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          {/* <button
+          <button
             onClick={() => setActiveTab('dashboard')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dashboard' ? 'bg-[#FED6A8]/30 text-[#8D5B41]' : 'text-gray-500 hover:bg-gray-50'}`}
           >
             <LayoutDashboard size={20} />
             <span className="font-semibold">Dashboard</span>
-          </button> */}
+          </button>
 
           <button
             onClick={() => setActiveTab('users')}
@@ -102,14 +117,6 @@ function Admin() {
             <Users size={20} />
             <span className="font-semibold">Users List</span>
           </button>
-
-          {/* <button
-            onClick={() => setActiveTab('settings')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'settings' ? 'bg-[#FED6A8]/30 text-[#8D5B41]' : 'text-gray-500 hover:bg-gray-50'}`}
-          >
-            <Settings size={20} />
-            <span className="font-semibold">Settings</span>
-          </button> */}
         </nav>
 
         <div className="p-4 border-t border-gray-100 mt-auto">
@@ -140,16 +147,92 @@ function Admin() {
               <div className="w-12 h-12 border-4 border-[#8D5B41] border-t-transparent rounded-full animate-spin mb-4"></div>
               <p className="text-gray-500 font-medium">Loading analytics...</p>
             </div>
+          ) : activeTab === 'dashboard' ? (
+            <div className="space-y-8">
+              {/* Stats Highlights */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-6">
+                  <div className="w-16 h-16 bg-[#FED6A8]/20 rounded-2xl flex items-center justify-center text-[#8D5B41]">
+                    <Users size={32} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Total Users</p>
+                    <h4 className="text-3xl font-bold text-gray-800">{stats.totalUsers}</h4>
+                  </div>
+                </div>
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-6">
+                  <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-500">
+                    <FileText size={32} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Total Sessions</p>
+                    <h4 className="text-3xl font-bold text-gray-800">{stats.totalSessions}</h4>
+                  </div>
+                </div>
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-6">
+                  <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center text-green-500">
+                    <LayoutDashboard size={32} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Total Time Spent</p>
+                    <h4 className="text-3xl font-bold text-gray-800">{formatTime(stats.totalTime)}</h4>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Activity List */}
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-gray-50 flex justify-between items-center">
+                  <h4 className="font-bold text-gray-700">Recent User Sessions</h4>
+                  <button onClick={() => setActiveTab('users')} className="text-sm font-bold text-[#8D5B41] hover:underline flex items-center gap-1">
+                    View All Users <ChevronRight size={14} />
+                  </button>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {users.slice(0, 5).map(user => (
+                    <div key={user.id} className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-[#8D5B41] font-bold">
+                          {user.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-800 text-sm">{user.name}</p>
+                          <p className="text-xs text-gray-400">{new Date(user.createdAt).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-sm text-[#8D5B41]">{user.visits?.length || 0} visits</p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase">{formatTime(user.totalTimeSpent)} active</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : activeTab === 'users' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Users List Column */}
               <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-6 border-b border-gray-50 flex justify-between items-center">
-                  <h4 className="font-bold text-gray-700">All Users</h4>
-                  <span className="bg-gray-100 px-3 py-1 rounded-full text-xs font-bold text-gray-500">{users.length} Users</span>
+                <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-white sticky top-0 z-10">
+                  <div>
+                    <h4 className="font-bold text-gray-700">All Users</h4>
+                    <span className="text-xs font-bold text-gray-400">{users.length} registered</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-gray-400">Sort:</span>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                      className="text-xs font-bold text-[#8D5B41] bg-[#FED6A8]/10 px-2 py-1 rounded-lg border-none focus:ring-0 cursor-pointer"
+                    >
+                      <option value="recent">Recently Joined</option>
+                      <option value="name">Name (A-Z)</option>
+                      <option value="engagement">Most Engaged</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="divide-y divide-gray-50 max-h-[600px] overflow-y-auto">
-                  {users.map((user) => (
+                  {getSortedUsers().map((user) => (
                     <div
                       key={user.id}
                       onClick={() => setSelectedUser(user)}
@@ -175,7 +258,7 @@ function Admin() {
                 </div>
               </div>
 
-              {/* User Detail Column - NOW SHOWING VISITS */}
+              {/* User Detail Column */}
               <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden min-h-[500px]">
                 {selectedUser ? (
                   <div className="h-full flex flex-col">
@@ -201,7 +284,7 @@ function Admin() {
 
                       {selectedUser.visits && selectedUser.visits.length > 0 ? (
                         <div className="space-y-4">
-                          {selectedUser.visits.map((visit, idx) => (
+                          {[...(selectedUser.visits || [])].reverse().map((visit, idx) => (
                             <div key={idx} className="flex flex-col gap-2">
                               <div
                                 onClick={() => setExpandedVisit(expandedVisit === idx ? null : idx)}
@@ -236,12 +319,22 @@ function Admin() {
                               {/* Page breakdown */}
                               {expandedVisit === idx && visit.pageVisits && (
                                 <div className="ml-14 space-y-2 border-l-2 border-[#FED6A8]/30 pl-4 animate-in slide-in-from-top-2 duration-200">
-                                  {Object.entries(visit.pageVisits).sort(([a], [b]) => Number(a) - Number(b)).map(([pageIdx, duration]) => (
-                                    <div key={pageIdx} className="flex items-center justify-between text-sm py-1">
-                                      <span className="text-gray-600">Page {Number(pageIdx) + 1}</span>
-                                      <span className="font-bold text-[#8D5B41]">{formatTime(duration)}</span>
-                                    </div>
-                                  ))}
+                                  {Object.entries(visit.pageVisits)
+                                    .sort(([a], [b]) => {
+                                      // Extract page number from path like "/home/2/page-5"
+                                      const pageA = parseInt(a.split('-').pop() || '0');
+                                      const pageB = parseInt(b.split('-').pop() || '0');
+                                      return pageA - pageB;
+                                    })
+                                    .map(([subPath, duration]) => {
+                                      const pageNum = subPath.split('-').pop();
+                                      return (
+                                        <div key={subPath} className="flex items-center justify-between text-sm py-1">
+                                          <span className="text-gray-600">Page {pageNum}</span>
+                                          <span className="font-bold text-[#8D5B41]">{formatTime(duration)}</span>
+                                        </div>
+                                      );
+                                    })}
                                 </div>
                               )}
                             </div>
@@ -279,20 +372,6 @@ function Admin() {
                   </div>
                 )}
               </div>
-            </div>
-          )}
-
-          {activeTab === 'dashboard' && (
-            <div className="flex flex-col items-center justify-center h-[60vh] text-gray-400">
-              <LayoutDashboard size={64} className="mb-4 opacity-20" />
-              <p className="text-xl font-bold italic">Dashboard stats coming soon...</p>
-            </div>
-          )}
-
-          {activeTab === 'settings' && (
-            <div className="flex flex-col items-center justify-center h-[60vh] text-gray-400">
-              <Settings size={64} className="mb-4 opacity-20" />
-              <p className="text-xl font-bold italic">Admin settings coming soon...</p>
             </div>
           )}
         </main>

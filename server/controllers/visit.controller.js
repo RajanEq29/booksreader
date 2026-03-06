@@ -4,32 +4,53 @@ exports.createVisit = async (req, res) => {
     try {
         const { name, phone, email, message, visits, totalTimeSpent } = req.body;
 
-        if (!name || !phone) {
+        if (!phone) {
             return res.status(400).json({
                 success: false,
-                message: "Name and phone are required",
+                message: "Phone is required",
             });
         }
 
-        const newVisit = new UserVisit({
-            name,
-            phone,
-            email,
-            message,
-            visits: visits || [],
-            totalTimeSpent: totalTimeSpent || 0,
-        });
+        // Check if user already exists
+        let user = await UserVisit.findOne({ phone });
 
-        await newVisit.save();
+        // Filter out visits with 0 duration to save meaningful data only
+        const meaningfulVisits = (visits || []).filter(v => v.duration > 0);
+        const meaningfulTime = meaningfulVisits.reduce((acc, v) => acc + (v.duration || 0), 0);
+
+        if (user) {
+            // Update existing user with new visits if provided
+            if (meaningfulVisits.length > 0) {
+                user.visits.push(...meaningfulVisits);
+                user.totalTimeSpent += meaningfulTime;
+            }
+            // Optionally update name/email/message if they are provided
+            if (name) user.name = name;
+            if (email) user.email = email;
+            if (message) user.message = message;
+
+            await user.save();
+        } else {
+            // Create new user
+            user = new UserVisit({
+                name: name || "Anonymous",
+                phone,
+                email,
+                message,
+                visits: meaningfulVisits,
+                totalTimeSpent: meaningfulTime,
+            });
+            await user.save();
+        }
 
         res.status(201).json({
             success: true,
-            message: "Visit data saved successfully",
-            data: newVisit,
+            message: user.isNew ? "Visit data saved successfully" : "Visit added to existing user",
+            data: user,
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("Error in createVisit:", error);
         res.status(500).json({
             success: false,
             message: "Server Error",

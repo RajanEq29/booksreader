@@ -81,18 +81,20 @@ export default function Home() {
   useEffect(() => {
     import('../utils/trackingState').then(async ({ trackingState }) => {
       const { syncCurrentTime } = await import('../utils/tracking');
-      await syncCurrentTime(); // Sync time on old page
-      trackingState.currentPageIndex = currentPage; // Switch to new page index
+
+      // If we already have a visit, sync the time spent on the OLD page
+      if (trackingState.currentVisit) {
+        await syncCurrentTime();
+      }
+
+      // Update to the NEW page index
+      trackingState.currentPageIndex = currentPage;
+      // Reset the lastUpdateTime so the new page starts fresh
+      trackingState.lastUpdateTime = Date.now();
     });
-    // Cleanup on unmount
-    return () => {
-      import('../utils/trackingState').then(({ trackingState }) => {
-        trackingState.currentPageIndex = undefined;
-      });
-    };
   }, [currentPage]);
 
-  
+
   useEffect(() => {
     setInputPage((currentPage + 1).toString());
   }, [currentPage]);
@@ -101,12 +103,12 @@ export default function Home() {
     e.preventDefault();
     const pageNum = parseInt(inputPage, 10);
     if (bookRef.current && numPages && pageNum >= 1 && pageNum <= numPages + 2) {
- 
+
       bookRef.current.pageFlip().flip(pageNum - 1);
     }
   };
 
- 
+
   const getDimensions = () => {
 
     const availableHeight = window.innerHeight - 10
