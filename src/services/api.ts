@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000/api/auth';
+const API_BASE_URL = 'https://heritage-17zz.onrender.com/api/auth';
 
 export const createVisit = async (userData: any) => {
     try {

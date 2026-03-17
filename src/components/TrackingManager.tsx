@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { syncCurrentTime } from '../utils/tracking';
 
-const TRACKING_INTERVAL = 10000; // Sync every 10 seconds
+
 
 export default function TrackingManager() {
     const location = useLocation();
